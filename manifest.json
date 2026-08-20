@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "app.vaultez",
+  "name": "Vaultez",
+  "version": "0.1.0",
+  "author": "Nur Ketene",
+  "license": "MIT",
+  "description": "Browse Vaultez companies, projects, and secrets from the bar",
+  "kinds": ["bar-widget"],
+  "entryPoints": { "barWidget": "Panel.qml" },
+  "barWidget": {
+    "displayName": "Vaultez",
+    "description": "Browse companies, projects, and secrets stored in Vaultez, reveal or copy values",
+    "category": "Utility",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "vaultezPath": "vaultez"
+    },
+    "schema": [
+      {
+        "key": "vaultezPath",
+        "type": "path",
+        "label": "Path to vaultez binary",
+        "defaultValue": "vaultez",
+        "description": "Command name or absolute path to the vaultez-cli executable"
+      }
+    ]
+  }
+}
