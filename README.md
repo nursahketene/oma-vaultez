@@ -1,7 +1,7 @@
 # Vaultez for Omarchy
 
-Browse your [Vaultez](https://vaultez.app) companies, projects, and secrets from
-the Omarchy bar.
+Get your [Vaultez](https://vaultez.app) secrets from the Omarchy menu bar, sorted
+by company and project.
 
 ## Installation
 
