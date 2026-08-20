@@ -11,21 +11,15 @@ You'll need the `vaultez-cli` gem installed:
 gem install vaultez-cli
 ```
 
-Then clone this repo directly into your Omarchy plugins directory:
+Then add it as a plugin:
 
 ```bash
-git clone https://github.com/nursahketene/oma-vaultez.git ~/.config/omarchy/plugins/app.vaultez
-```
-
-Enable it in the bar:
-
-```bash
-omarchy plugin enable app.vaultez --section right
+omarchy plugin add https://github.com/nursahketene/oma-vaultez.git --enable
 ```
 
 ## Usage
 
-Click the lock icon in the bar.
+Click the key icon in the bar.
 
 - **Not logged in?** Click "Log In" — this opens a terminal running `vaultez login`
   (email, password, and your TOTP code, same as running it yourself). Reopen the
