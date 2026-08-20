@@ -225,9 +225,18 @@ Panel {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: ""
     dimmed: root.phase !== "ready"
     tooltipText: "Vaultez: " + root.summary
+    iconComponent: Component {
+      Item {
+        VaultezIcon {
+          anchors.centerIn: parent
+          iconSize: Style.space(14)
+          color: root.foreground
+          opacity: root.phase === "ready" ? 1.0 : 0.6
+        }
+      }
+    }
     onPressed: root.toggle()
   }
 
@@ -269,11 +278,9 @@ Panel {
             fontFamily: root.fontFamily
             iconOpacity: root.phase === "ready" ? 1.0 : 0.5
             iconComponent: Component {
-              Text {
-                text: ""
+              VaultezIcon {
+                iconSize: Style.font.display
                 color: root.foreground
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.display
               }
             }
           }
