@@ -3,7 +3,7 @@
 Get your [Vaultez](https://vaultez.app) secrets from the Omarchy menu bar, sorted
 by company and project.
 
-![Vaultez plugin showing a company's secrets](screenshot.png)
+![Vaultez plugin showing a company's secrets](preview.png)
 
 ## Installation
 
