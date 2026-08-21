@@ -3,6 +3,8 @@
 Get your [Vaultez](https://vaultez.app) secrets from the Omarchy menu bar, sorted
 by company and project.
 
+![Vaultez plugin showing a company's secrets](screenshot.png)
+
 ## Installation
 
 You'll need the `vaultez-cli` gem installed:
