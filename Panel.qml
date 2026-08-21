@@ -79,6 +79,20 @@ Panel {
     if (filterField) filterField.text = ""
   }
 
+  // Re-fetch whatever the panel was last showing (companies/projects/secrets)
+  // instead of always resetting to the companies list — so closing and
+  // reopening the panel lands back where the user left off.
+  function refetchCurrentLevel() {
+    if (root.viewLevel === "projects" && root.activeCompany) {
+      startFetch("projects", ["--company=" + root.activeCompany.name, "--projects"])
+    } else if (root.viewLevel === "secrets" && root.activeCompany && root.activeProject) {
+      startFetch("secrets", ["--company=" + root.activeCompany.name, "--project=" + root.activeProject.name])
+    } else {
+      root.viewLevel = "companies"
+      startFetch("companies", ["--companies"])
+    }
+  }
+
   function startFetch(level, extraArgs) {
     root.phase = "loading"
     root.errorText = ""
@@ -113,6 +127,12 @@ Panel {
   }
 
   function enterCompany(company) {
+    // fetchProcess is a single shared Process; starting a new fetch while one
+    // is already in flight is a no-op (Quickshell won't restart a running
+    // Process), so the in-flight response would land under whatever
+    // company/project is current by the time it exits. Block navigation
+    // during "loading" so there's never more than one fetch outstanding.
+    if (root.phase === "loading") return
     root.navStack = root.navStack.concat([pushFrame()])
     root.activeCompany = company
     root.activeProject = null
@@ -123,6 +143,7 @@ Panel {
   }
 
   function enterProject(project) {
+    if (root.phase === "loading") return
     root.navStack = root.navStack.concat([pushFrame()])
     root.activeProject = project
     root.viewLevel = "secrets"
@@ -133,6 +154,10 @@ Panel {
   }
 
   function goBack() {
+    // Also guarded against "loading" — without this, back-then-forward while
+    // a fetch is still in flight is exactly how two overlapping fetches can
+    // happen in the first place (see enterCompany's comment).
+    if (root.phase === "loading") return
     if (root.navStack.length === 0) return
     var frame = root.navStack[root.navStack.length - 1]
     root.navStack = root.navStack.slice(0, -1)
@@ -163,9 +188,20 @@ Panel {
     // something the user copied afterward. We keep a hash rather than the
     // plaintext around so the secret itself doesn't linger in memory any
     // longer than the copy itself requires.
+    //
+    // The secret goes over stdin to both wl-copy and sha256sum, never as a
+    // command-line argument — argv is visible to any process on this account
+    // via /proc/<pid>/cmdline for as long as the child lives, stdin isn't.
     var text = String(value || "")
-    Quickshell.execDetached(["bash", "-c", "printf %s " + Util.shellQuote(text) + " | wl-copy --sensitive"])
-    clipboardHashProcess.command = ["bash", "-c", "printf %s " + Util.shellQuote(text) + " | sha256sum | cut -d' ' -f1"]
+    // stdinEnabled is set false in onStarted once the write is flushed, to
+    // close the channel so the child sees EOF (see the Process below) — it
+    // has to be re-enabled here before every restart, since the declarative
+    // "stdinEnabled: true" on the component only applies once, at creation.
+    copyProcess.stdinEnabled = true
+    copyProcess.pendingText = text
+    copyProcess.running = true
+    clipboardHashProcess.stdinEnabled = true
+    clipboardHashProcess.pendingText = text
     clipboardHashProcess.running = true
   }
 
@@ -195,7 +231,12 @@ Panel {
   implicitHeight: button.implicitHeight
 
   onOpenedChanged: if (root.opened) {
-    resetNavigation()
+    // Deliberately NOT resetNavigation() — that would wipe viewLevel/
+    // activeCompany/activeProject, throwing away where the user was. Just
+    // re-mask secrets and clear the filter; refetchCurrentLevel() (below)
+    // reloads whatever level was last showing.
+    root.revealedNames = ({})
+    if (filterField) filterField.text = ""
     root.phase = "loading"
     root.errorText = ""
     if (!preflightProcess.running) preflightProcess.running = true
@@ -210,7 +251,7 @@ Panel {
       waitForEnd: true
       onStreamFinished: {
         if (String(preflightStdout.text).trim() === "ready") {
-          root.startFetch("companies", ["--companies"])
+          root.refetchCurrentLevel()
         } else {
           root.phase = "not-installed"
         }
@@ -226,12 +267,40 @@ Panel {
   }
 
   Process {
+    id: copyProcess
+    command: ["wl-copy", "--sensitive"]
+    stdinEnabled: true
+    property string pendingText: ""
+    onStarted: {
+      write(pendingText)
+      pendingText = ""
+      // Without this, stdin never sees EOF: wl-copy blocks waiting for more
+      // input instead of forking to serve the clipboard, and since a Process
+      // that hasn't exited can't be restarted, every copy after the first
+      // one in a session silently does nothing.
+      stdinEnabled = false
+    }
+  }
+
+  Process {
     id: clipboardHashProcess
+    command: ["sha256sum"]
+    stdinEnabled: true
+    property string pendingText: ""
+    onStarted: {
+      write(pendingText)
+      pendingText = ""
+      // Same reasoning as copyProcess — sha256sum reads until EOF before
+      // printing anything; without closing stdin it hangs forever and the
+      // clipboard auto-clear timer never fires.
+      stdinEnabled = false
+    }
     stdout: StdioCollector {
       id: clipboardHashStdout
       waitForEnd: true
       onStreamFinished: {
-        root.clipboardHash = String(clipboardHashStdout.text).trim()
+        // "sha256sum" reading from stdin (no filename) prints "<hash>  -".
+        root.clipboardHash = String(clipboardHashStdout.text).trim().split(/\s+/)[0] || ""
         clipboardClearTimer.restart()
       }
     }
