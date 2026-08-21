@@ -18,6 +18,12 @@ Panel {
   property string phase: "idle"
   property string errorText: ""
   property string pendingLevel: ""
+  // Once the CLI is confirmed present, skip re-running the "command -v"
+  // preflight check on every subsequent open — it's a full extra subprocess
+  // round-trip in front of the real fetch for a result that's stable for
+  // the rest of the session. Stays false (so preflight keeps re-checking)
+  // until a check actually succeeds.
+  property bool cliVerified: false
 
   // "companies" | "projects" | "secrets"
   property string viewLevel: "companies"
@@ -97,13 +103,15 @@ Panel {
     // Defense-in-depth: enterCompany/enterProject/goBack already refuse to
     // run while phase is "loading", so in practice this only guards
     // refetchCurrentLevel() (fired on every panel open) against overlapping
-    // a fetch that's still in flight from before the panel was closed. That
-    // scenario is currently harmless anyway (nav state can't change while
-    // loading, so a redundant call always reconstructs identical args) but
-    // only because of an implicit invariant spread across four functions —
-    // this makes the actual constraint explicit at the one place all
-    // fetches funnel through, instead of relying on that being true forever.
-    if (root.phase === "loading") return
+    // a fetch that's still in flight from before the panel was closed.
+    //
+    // This checks fetchProcess.running, NOT root.phase — phase is set to
+    // "loading" eagerly by onOpenedChanged before the real fetch even
+    // starts (preflight runs first, asynchronously), so by the time this
+    // function's own legitimate call actually arrives, phase is already
+    // "loading" from that same open sequence. Checking phase here would
+    // make startFetch() block its own first call on every open.
+    if (fetchProcess.running) return
     root.phase = "loading"
     root.errorText = ""
     root.pendingLevel = level
@@ -249,7 +257,11 @@ Panel {
     if (filterField) filterField.text = ""
     root.phase = "loading"
     root.errorText = ""
-    if (!preflightProcess.running) preflightProcess.running = true
+    if (root.cliVerified) {
+      root.refetchCurrentLevel()
+    } else if (!preflightProcess.running) {
+      preflightProcess.running = true
+    }
     Qt.callLater(function() { filterField.forceActiveFocus() })
   }
 
@@ -261,6 +273,7 @@ Panel {
       waitForEnd: true
       onStreamFinished: {
         if (String(preflightStdout.text).trim() === "ready") {
+          root.cliVerified = true
           root.refetchCurrentLevel()
         } else {
           root.phase = "not-installed"
