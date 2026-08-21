@@ -154,7 +154,11 @@ Panel {
   }
 
   function copySecret(value) {
-    Quickshell.execDetached(["bash", "-c", "printf %s " + Util.shellQuote(String(value || "")) + " | wl-copy"])
+    // --sensitive marks the clipboard offer so Omarchy's own clipboard-history
+    // watcher (capture.sh) skips recording it. Also auto-clear the live
+    // clipboard shortly after, same as a password manager would.
+    Quickshell.execDetached(["bash", "-c", "printf %s " + Util.shellQuote(String(value || "")) + " | wl-copy --sensitive"])
+    clipboardClearTimer.restart()
   }
 
   function handleEscape() {
@@ -211,6 +215,13 @@ Panel {
     stdout: StdioCollector { id: fetchStdout; waitForEnd: true }
     stderr: StdioCollector { id: fetchStderr; waitForEnd: true }
     onExited: function(code) { root.handleFetchExit(code, fetchStdout.text, fetchStderr.text) }
+  }
+
+  Timer {
+    id: clipboardClearTimer
+    interval: 45000
+    repeat: false
+    onTriggered: Quickshell.execDetached(["wl-copy", "--clear"])
   }
 
   IpcHandler {
@@ -299,6 +310,7 @@ Panel {
             }
 
             Text {
+              textFormat: Text.PlainText
               width: parent.width - (root.viewLevel !== "companies" ? Style.space(30) : 0)
               text: root.breadcrumb
               color: root.dim
@@ -317,6 +329,7 @@ Panel {
           }
 
           Text {
+            textFormat: Text.PlainText
             visible: root.errorText !== "" && root.phase === "error"
             width: parent.width
             text: root.errorText
@@ -332,6 +345,7 @@ Panel {
             spacing: Style.space(8)
 
             Text {
+              textFormat: Text.PlainText
               width: parent.width
               text: "vaultez CLI not found" + (root.vaultezPath !== "vaultez" ? " at " + root.vaultezPath : "") + ". Install it to use this plugin."
               color: root.foreground
@@ -355,6 +369,7 @@ Panel {
             spacing: Style.space(8)
 
             Text {
+              textFormat: Text.PlainText
               width: parent.width
               text: "You're not logged in to Vaultez."
               color: root.foreground
@@ -372,6 +387,7 @@ Panel {
             }
 
             Text {
+              textFormat: Text.PlainText
               width: parent.width
               text: "Don't have an account? Create one at vaultez.app"
               color: root.dim
@@ -389,6 +405,7 @@ Panel {
           }
 
           Text {
+            textFormat: Text.PlainText
             visible: root.phase === "loading"
             width: parent.width
             text: "Loading…"
@@ -398,6 +415,7 @@ Panel {
           }
 
           Text {
+            textFormat: Text.PlainText
             visible: root.phase === "ready" && root.currentRows.length === 0
             width: parent.width
             text: root.viewLevel === "companies" ? "No companies found."
@@ -410,6 +428,7 @@ Panel {
           }
 
           Text {
+            textFormat: Text.PlainText
             visible: root.phase === "ready" && root.currentRows.length > 0 && root.displayRows.length === 0
             width: parent.width
             text: "No matches for “" + (filterField ? filterField.text : "") + "”."
@@ -501,6 +520,7 @@ Panel {
       spacing: Style.space(8)
 
       Text {
+        textFormat: Text.PlainText
         Layout.fillWidth: true
         text: row.rowName
         color: row.foreground
@@ -509,6 +529,7 @@ Panel {
         elide: Text.ElideRight
       }
       Text {
+        textFormat: Text.PlainText
         visible: row.rowMeta !== ""
         text: row.rowMeta
         color: row.dim
@@ -553,6 +574,7 @@ Panel {
         spacing: Style.space(1)
 
         Text {
+          textFormat: Text.PlainText
           Layout.fillWidth: true
           text: srow.secretName
           color: srow.foreground
@@ -561,6 +583,7 @@ Panel {
           elide: Text.ElideRight
         }
         Text {
+          textFormat: Text.PlainText
           Layout.fillWidth: true
           text: srow.revealed ? srow.secretValue : Model.maskedValue()
           color: srow.dim
