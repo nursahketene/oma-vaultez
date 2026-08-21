@@ -153,12 +153,20 @@ Panel {
     root.revealedNames = next
   }
 
+  property string clipboardHash: ""
+
   function copySecret(value) {
     // --sensitive marks the clipboard offer so Omarchy's own clipboard-history
     // watcher (capture.sh) skips recording it. Also auto-clear the live
-    // clipboard shortly after, same as a password manager would.
-    Quickshell.execDetached(["bash", "-c", "printf %s " + Util.shellQuote(String(value || "")) + " | wl-copy --sensitive"])
-    clipboardClearTimer.restart()
+    // clipboard shortly after, same as a password manager would — but only
+    // if the clipboard still holds what we put there, so we never clobber
+    // something the user copied afterward. We keep a hash rather than the
+    // plaintext around so the secret itself doesn't linger in memory any
+    // longer than the copy itself requires.
+    var text = String(value || "")
+    Quickshell.execDetached(["bash", "-c", "printf %s " + Util.shellQuote(text) + " | wl-copy --sensitive"])
+    clipboardHashProcess.command = ["bash", "-c", "printf %s " + Util.shellQuote(text) + " | sha256sum | cut -d' ' -f1"]
+    clipboardHashProcess.running = true
   }
 
   function handleEscape() {
@@ -217,11 +225,41 @@ Panel {
     onExited: function(code) { root.handleFetchExit(code, fetchStdout.text, fetchStderr.text) }
   }
 
+  Process {
+    id: clipboardHashProcess
+    stdout: StdioCollector {
+      id: clipboardHashStdout
+      waitForEnd: true
+      onStreamFinished: {
+        root.clipboardHash = String(clipboardHashStdout.text).trim()
+        clipboardClearTimer.restart()
+      }
+    }
+  }
+
   Timer {
     id: clipboardClearTimer
     interval: 45000
     repeat: false
-    onTriggered: Quickshell.execDetached(["wl-copy", "--clear"])
+    onTriggered: {
+      clipboardCheckProcess.command = ["bash", "-c", "wl-paste --no-newline 2>/dev/null | sha256sum | cut -d' ' -f1"]
+      clipboardCheckProcess.running = true
+    }
+  }
+
+  Process {
+    id: clipboardCheckProcess
+    stdout: StdioCollector {
+      id: clipboardCheckStdout
+      waitForEnd: true
+      onStreamFinished: {
+        var currentHash = String(clipboardCheckStdout.text).trim()
+        if (root.clipboardHash !== "" && currentHash === root.clipboardHash) {
+          Quickshell.execDetached(["wl-copy", "--clear"])
+        }
+        root.clipboardHash = ""
+      }
+    }
   }
 
   IpcHandler {
