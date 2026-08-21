@@ -94,6 +94,16 @@ Panel {
   }
 
   function startFetch(level, extraArgs) {
+    // Defense-in-depth: enterCompany/enterProject/goBack already refuse to
+    // run while phase is "loading", so in practice this only guards
+    // refetchCurrentLevel() (fired on every panel open) against overlapping
+    // a fetch that's still in flight from before the panel was closed. That
+    // scenario is currently harmless anyway (nav state can't change while
+    // loading, so a redundant call always reconstructs identical args) but
+    // only because of an implicit invariant spread across four functions —
+    // this makes the actual constraint explicit at the one place all
+    // fetches funnel through, instead of relying on that being true forever.
+    if (root.phase === "loading") return
     root.phase = "loading"
     root.errorText = ""
     root.pendingLevel = level
