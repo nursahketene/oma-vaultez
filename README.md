@@ -7,10 +7,13 @@ by company and project.
 
 ## Installation
 
-You'll need the `vaultez-cli` gem installed:
+You'll need the `vaultez-cli` gem installed, at least version 0.3.0 (earlier
+versions had a config-file-permissions bug and a CLI flag that could expose
+your session token to other local users — this plugin hands that CLI your
+saved session and every secret it returns, so don't install an older version):
 
 ```bash
-gem install vaultez-cli
+gem install vaultez-cli --version '>= 0.3.0'
 ```
 
 Then add it as a plugin:
@@ -18,6 +21,16 @@ Then add it as a plugin:
 ```bash
 omarchy plugin add https://github.com/nursahketene/oma-vaultez.git --enable
 ```
+
+## Removal
+
+```bash
+omarchy plugin remove app.vaultez
+```
+
+This disables the plugin and removes it from `~/.config/omarchy/plugins/`
+(a timestamped backup is kept alongside the other plugin directories). To
+also remove the CLI: `gem uninstall vaultez-cli`.
 
 ## Usage
 
@@ -27,7 +40,8 @@ Click the key icon in the bar.
   (email, password, and your TOTP code, same as running it yourself). Reopen the
   panel once you're done. Don't have an account yet? There's a link to sign up at
   vaultez.app right below the button.
-- **CLI not found?** Click "Install" — opens a terminal running `gem install vaultez-cli`.
+- **CLI not found?** Click "Install" — opens a terminal running
+  `gem install vaultez-cli --version '>= 0.3.0'`.
 - Click a company, then a project, to see its secrets. Secret values are masked by
   default — click a secret to reveal it, or use the copy button to copy the value to
   your clipboard without revealing it on screen.
