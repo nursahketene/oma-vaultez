@@ -230,13 +230,14 @@ Panel {
   }
 
   function openInstallTerminal() {
-    // Pinned to the minimum version carrying the config-file-permissions
-    // fix (0.2.3) and the --token flag removal (0.3.0) - the plugin
-    // immediately hands this CLI the saved session and returned secrets,
-    // so an unversioned "gem install" would silently trust whatever the
-    // latest published version happens to be at install time instead of a
-    // known-fixed baseline.
-    var command = "gem install vaultez-cli --version '>= 0.3.0'; exec \"${SHELL:-/bin/bash}\""
+    // Pinned to the exact version this submission was reviewed against.
+    // The plugin immediately hands this CLI the saved session and returned
+    // secrets, so an open-ended constraint like ">= 0.3.0" would let a
+    // future, unreviewed release install itself with no re-audit - a
+    // reviewed plugin commit must bind to a single reviewed CLI version.
+    // Bump this (and the README) deliberately when adopting a newer,
+    // separately-reviewed vaultez-cli release.
+    var command = "gem install vaultez-cli --version '0.3.0'; exec \"${SHELL:-/bin/bash}\""
     Quickshell.execDetached(["xdg-terminal-exec", "bash", "-lc", command])
     root.close()
   }

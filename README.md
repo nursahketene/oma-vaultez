@@ -7,14 +7,20 @@ by company and project.
 
 ## Installation
 
-You'll need the `vaultez-cli` gem installed, at least version 0.3.0 (earlier
-versions had a config-file-permissions bug and a CLI flag that could expose
-your session token to other local users — this plugin hands that CLI your
-saved session and every secret it returns, so don't install an older version):
+You'll need the `vaultez-cli` gem installed, at exactly the version this
+plugin was reviewed against, 0.3.0. This plugin hands that CLI your saved
+session and every secret it returns, so install is pinned rather than
+open-ended — an unbounded `>= 0.3.0` would let a future, unreviewed CLI
+release install itself with no re-audit of this plugin. Earlier versions
+also had a config-file-permissions bug and a CLI flag that could expose your
+session token to other local users, so don't install an older one either:
 
 ```bash
-gem install vaultez-cli --version '>= 0.3.0'
+gem install vaultez-cli --version '0.3.0'
 ```
+
+If a newer `vaultez-cli` is available, wait for a plugin update that bumps
+this pin — that means the new CLI version has been reviewed alongside it.
 
 Then add it as a plugin:
 
@@ -41,7 +47,7 @@ Click the key icon in the bar.
   panel once you're done. Don't have an account yet? There's a link to sign up at
   vaultez.app right below the button.
 - **CLI not found?** Click "Install" — opens a terminal running
-  `gem install vaultez-cli --version '>= 0.3.0'`.
+  `gem install vaultez-cli --version '0.3.0'`.
 - Click a company, then a project, to see its secrets. Secret values are masked by
   default — click a secret to reveal it, or use the copy button to copy the value to
   your clipboard without revealing it on screen.
