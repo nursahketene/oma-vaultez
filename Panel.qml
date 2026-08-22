@@ -27,11 +27,12 @@ Panel {
   // that's stable for the rest of the session. Stays false (so preflight
   // keeps re-checking) until a check actually succeeds.
   property bool cliVerified: false
-  // Kept in one place so the trusted range is obvious: this plugin was
-  // reviewed against the 0.3.x series (gem pin "~> 0.3.0" below), so any
-  // 0.3.x patch release is trusted automatically but a 0.2.x (pre-fix) or
-  // 0.4.0+ (unreviewed) install is not, even if it's already on PATH.
-  readonly property var trustedCliVersionPattern: /^0\.3\.\d+$/
+  // Kept in one place so the trusted version is obvious: this plugin
+  // commit was reviewed against exactly this vaultez-cli release (gem pin
+  // below matches). Even a same-series patch release is unreviewed until
+  // a human looks at it and a new plugin commit bumps this - so the
+  // check is an exact match, not a range.
+  readonly property string trustedCliVersion: "0.3.0"
 
   // "companies" | "projects" | "secrets"
   property string viewLevel: "companies"
@@ -239,16 +240,16 @@ Panel {
   }
 
   function openInstallTerminal() {
-    // Pessimistic constraint (RubyGems "~>"), not an exact pin or an
-    // open range: trusts any 0.3.x patch release - which by semver is
-    // fixes only, no new behavior - so a future critical-fix release like
-    // 0.3.1 installs with no plugin change needed. A 0.4.0+ minor/major
-    // bump is still blocked here; adopting one requires deliberately
-    // bumping this pin (and trustedCliVersionPattern above, and the
-    // README) in a new, separately-reviewed plugin commit. Also doubles
-    // as the "Update" action from the outdated-cli state, since gem
-    // install upgrades an existing older install in place.
-    var command = "gem install vaultez-cli --version '~> 0.3.0'; exec \"${SHELL:-/bin/bash}\""
+    // Exact pin, matching trustedCliVersion above: this plugin commit was
+    // reviewed against precisely this vaultez-cli release, which
+    // immediately receives the saved session and returned secrets. Even a
+    // same-series patch release is unreviewed until a human looks at it,
+    // so adopting one means deliberately bumping both this string and
+    // trustedCliVersion in a new plugin commit - never a range. Also
+    // doubles as the "Update" action from the outdated-cli state, since
+    // gem install moves an existing install (older or newer) to exactly
+    // this version.
+    var command = "gem install vaultez-cli --version '" + root.trustedCliVersion + "'; exec \"${SHELL:-/bin/bash}\""
     Quickshell.execDetached(["xdg-terminal-exec", "bash", "-lc", command])
     root.close()
   }
@@ -285,10 +286,10 @@ Panel {
 
   Process {
     id: preflightProcess
-    // Runs the real CLI's --version output through a trusted-range check
+    // Runs the real CLI's --version output through an exact-match check
     // rather than just confirming *some* binary exists on PATH - an old,
-    // pre-fix version (or some future, unreviewed one) sitting on PATH from
-    // before this plugin was installed must not be silently trusted with
+    // pre-fix version, a same-series patch release, or some future,
+    // unreviewed one sitting on PATH must not be silently trusted with
     // the saved session and returned secrets.
     command: ["bash", "-c", Util.shellQuote(root.vaultezPath) + " --version 2>/dev/null || printf MISSING"]
     stdout: StdioCollector {
@@ -300,7 +301,7 @@ Panel {
         if (output === "MISSING" || !match) {
           root.installedCliVersion = ""
           root.phase = "not-installed"
-        } else if (root.trustedCliVersionPattern.test(match[1])) {
+        } else if (match[1] === root.trustedCliVersion) {
           root.cliVerified = true
           root.refetchCurrentLevel()
         } else {
@@ -530,7 +531,7 @@ Panel {
             Text {
               textFormat: Text.PlainText
               width: parent.width
-              text: "Installed vaultez-cli " + root.installedCliVersion + " is not a version this plugin trusts (needs 0.3.x). Update it to continue."
+              text: "Installed vaultez-cli " + root.installedCliVersion + " is not the version this plugin trusts (needs exactly " + root.trustedCliVersion + "). Update it to continue."
               color: root.foreground
               font.family: root.fontFamily
               font.pixelSize: Style.font.bodySmall
