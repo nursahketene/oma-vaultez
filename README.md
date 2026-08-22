@@ -7,20 +7,24 @@ by company and project.
 
 ## Installation
 
-You'll need the `vaultez-cli` gem installed, at exactly the version this
-plugin was reviewed against, 0.3.0. This plugin hands that CLI your saved
-session and every secret it returns, so install is pinned rather than
-open-ended — an unbounded `>= 0.3.0` would let a future, unreviewed CLI
-release install itself with no re-audit of this plugin. Earlier versions
-also had a config-file-permissions bug and a CLI flag that could expose your
-session token to other local users, so don't install an older one either:
+You'll need the `vaultez-cli` gem installed, on the 0.3.x series this plugin
+was reviewed against. This plugin hands that CLI your saved session and
+every secret it returns, so the install is constrained to that series rather
+than left open-ended:
 
 ```bash
-gem install vaultez-cli --version '0.3.0'
+gem install vaultez-cli --version '~> 0.3.0'
 ```
 
-If a newer `vaultez-cli` is available, wait for a plugin update that bumps
-this pin — that means the new CLI version has been reviewed alongside it.
+`~> 0.3.0` allows patch releases (0.3.1, 0.3.2, …) — semver bugfixes and
+security patches only, so a future critical fix in the 0.3.x line installs
+with no plugin update needed — but blocks 0.2.x (the config-permissions bug
+and the `--token` flag exposure predate 0.3.0) and any 0.4.0+ release, which
+would need its own plugin update to review and adopt. The plugin also checks
+the *installed* CLI's actual version at runtime (not just that some binary
+exists on `$PATH`), so an old or unreviewed `vaultez` already installed
+before this plugin is not silently trusted — you'll see an "Update" prompt
+instead.
 
 Then add it as a plugin:
 
@@ -47,7 +51,10 @@ Click the key icon in the bar.
   panel once you're done. Don't have an account yet? There's a link to sign up at
   vaultez.app right below the button.
 - **CLI not found?** Click "Install" — opens a terminal running
-  `gem install vaultez-cli --version '0.3.0'`.
+  `gem install vaultez-cli --version '~> 0.3.0'`.
+- **CLI installed but on an untrusted version?** Click "Update" — runs the
+  same install command, which upgrades (or downgrades) the existing gem to
+  the newest 0.3.x release in place.
 - Click a company, then a project, to see its secrets. Secret values are masked by
   default — click a secret to reveal it, or use the copy button to copy the value to
   your clipboard without revealing it on screen.
